@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="FairLend scores micro-loan default risk, then audits and corrects decisions so women and rural applicants are not unfairly penalised. Interactive demo on synthetic data.">
+<meta name="theme-color" content="#0E6B5E">
+<meta property="og:title" content="FairLend: fair credit default prediction">
+<meta property="og:description" content="Interactive fairness-aware credit scoring for micro-finance lending.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230E6B5E'/%3E%3Cpath d='M32 12v34M18 20h28M18 20l-8 16h16zM46 20l-8 16h16z' stroke='white' stroke-width='3' fill='none' stroke-linejoin='round'/%3E%3Cpath d='M22 50h20' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>FairLend: credit default prediction under fairness constraints</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F5F8;--card:#fff;--ink:#15212C;--mute:#5A6B7A;--line:#DCE4EB;--brand:#0E6B5E;--brand2:#E4F1EE;--warn:#8A5A0B;--warnbg:#FBF0D9;--bad:#B03A33;--badbg:#FBE8E6;--ok:#1B7448;--okbg:#E2F3EA;--onbrand:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0E161D;--card:#16212A;--ink:#E6EDF3;--mute:#93A4B3;--line:#263541;--brand:#4CC2AE;--brand2:#143A35;--warn:#E3B04B;--warnbg:#3A2F14;--bad:#F08A80;--badbg:#3E1D1A;--ok:#5CCB92;--okbg:#14352A;--onbrand:#06201B;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0E161D;--card:#16212A;--ink:#E6EDF3;--mute:#93A4B3;--line:#263541;--brand:#4CC2AE;--brand2:#143A35;--warn:#E3B04B;--warnbg:#3A2F14;--bad:#F08A80;--badbg:#3E1D1A;--ok:#5CCB92;--okbg:#14352A;--onbrand:#06201B;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Public Sans",system-ui,sans-serif}
+h1,h2,h3{font-family:"Bricolage Grotesque","Public Sans",sans-serif;line-height:1.15;margin:0}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end;justify-content:space-between;margin-bottom:18px}
+h1{font-size:clamp(26px,4vw,38px);letter-spacing:-.02em}
+.sub{color:var(--mute);max-width:60ch;margin:6px 0 0}
+nav{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;overflow-x:auto;margin-bottom:18px}
+nav button{flex:1;white-space:nowrap;border:0;background:none;color:var(--mute);font:600 14px "Public Sans",sans-serif;padding:10px 14px;border-radius:9px;cursor:pointer}
+nav button[aria-selected=true]{background:var(--brand);color:var(--onbrand)}
+button:focus-visible,input:focus-visible,select:focus-visible,circle:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,5fr) minmax(0,6fr)}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h2{font-size:20px;margin-bottom:4px}.card h3{font-size:16px;margin:16px 0 6px}
+.mute{color:var(--mute);font-size:13px}
+.field{margin:12px 0}.field label{display:flex;justify-content:space-between;font-weight:500;font-size:14px}
+.field output{color:var(--brand);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--brand)}
+select{width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 2px}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 14px;border-radius:9px;font:600 14px "Public Sans",sans-serif;cursor:pointer}
+.btn.p{background:var(--brand);border-color:var(--brand);color:var(--onbrand)}.btn.bad{background:var(--badbg);color:var(--bad);border-color:var(--bad)}
+.verdict{border-radius:12px;padding:16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.verdict.ok{background:var(--okbg);color:var(--ok)}.verdict.no{background:var(--badbg);color:var(--bad)}
+.verdict b{font:700 28px "Bricolage Grotesque",sans-serif;display:block}
+.pct{font:700 40px "Bricolage Grotesque",sans-serif;margin-left:auto}
+.flag{background:var(--warnbg);color:var(--warn);padding:10px 12px;border-radius:10px;margin-top:12px;font-size:14px}
+.meter{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--ok),#E3B04B,var(--bad));position:relative;margin:18px 0 6px;opacity:.85}
+.meter i{position:absolute;top:-5px;width:4px;height:22px;background:var(--ink);border-radius:2px;transform:translateX(-2px)}
+.meter u{position:absolute;top:-5px;width:0;height:22px;border-left:2px dashed var(--ink)}
+.reason{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.reason:last-child{border:0}.reason b{flex:1;font-weight:500}
+.tag{font-size:12px;background:var(--warnbg);color:var(--warn);padding:1px 8px;border-radius:99px;white-space:nowrap}
+.bars{display:grid;grid-template-columns:150px 1fr;gap:5px 10px;align-items:center;font-size:13px}
+.bar{height:10px;position:relative;background:var(--line);border-radius:5px}
+.bar i{position:absolute;top:0;bottom:0;border-radius:5px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.chip{padding:5px 11px;border-radius:99px;font-size:13px;font-weight:600}
+.chip.ok{background:var(--okbg);color:var(--ok)}.chip.no{background:var(--badbg);color:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:10px 12px}.kpi b{font:700 24px "Bricolage Grotesque",sans-serif;display:block}
+.kpi.no b{color:var(--bad)}.kpi.ok b{color:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+.scroll{overflow-x:auto}
+.banner{border-radius:12px;padding:12px 16px;font-weight:600;margin-bottom:12px}.banner.ok{background:var(--okbg);color:var(--ok)}.banner.no{background:var(--badbg);color:var(--bad)}
+svg text{fill:var(--mute);font:11px "Public Sans",sans-serif}
+circle{cursor:pointer}
+.empty{text-align:center;color:var(--mute);padding:32px 12px}
+ol.life{padding-left:20px;margin:6px 0}ul{padding-left:20px}
+textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;padding:8px;margin:8px 0}
+[hidden]{display:none!important}
+footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:var(--mute);font-size:13px}
+.nojs{padding:24px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+ <div><h1>FairLend</h1><p class="sub">Predicts micro-loan default risk, then checks and corrects the decisions so women and rural applicants are not penalised for the data they leave behind.</p></div>
+ <div class="mute" id="status">Training models…</div>
+</header>
+<nav role="tablist" aria-label="Sections">
+ <button role="tab" data-t="score" aria-selected="true">Score an applicant</button>
+ <button role="tab" data-t="fair" aria-selected="false">Fairness lab</button>
+ <button role="tab" data-t="log" aria-selected="false">Audit log</button>
+ <button role="tab" data-t="about" aria-selected="false">About the project</button>
+</nav>
+
+<section id="score" class="grid">
+ <div class="card">
+  <h2>Applicant details</h2><p class="mute">Results update as you move any control. Gender and region are used only to set the fairness threshold, never as model inputs.</p>
+  <div class="presets"><button class="btn" data-p="0">Rural woman, informal trader</button><button class="btn" data-p="1">Urban salaried man</button><button class="btn" data-p="2">High-risk profile</button></div>
+  <div id="form"></div>
+ </div>
+ <div>
+  <div class="card" id="result"></div>
+ </div>
+</section>
+
+<section id="fair" hidden>
+ <div id="gate"></div>
+ <div class="grid">
+  <div class="card">
+   <h2>Fairness controls</h2><p class="mute">Both steps are applied to the same held-out test set of 2,000 synthetic borrowers.</p>
+   <div class="field"><label><span><input type="checkbox" id="rw"> Reweighing before training</span></label><div class="mute">Gives under-represented group and outcome combinations more weight so the model does not copy historical imbalance.</div></div>
+   <div class="field"><label>Group threshold calibration <output id="lamv"></output></label><input type="range" id="lam" min="0" max="100" step="5" value="0"><div class="mute">0% uses one cut-off for everyone. 100% sets each group’s cut-off so approval rates match.</div></div>
+   <div class="kpis" id="kpis"></div>
+   <h3>Cut-off by group</h3><div class="scroll"><table id="thr"></table></div>
+  </div>
+  <div class="card">
+   <h2>Accuracy versus fairness</h2><p class="mute">Each dot is one setting. Pick a dot to apply it. The target is to the right of the dashed line.</p>
+   <svg id="pareto" viewBox="0 0 460 320" width="100%" role="img" aria-label="Pareto frontier of balanced accuracy against disparate impact ratio"></svg>
+   <div class="chips"><span class="chip" style="background:var(--brand2);color:var(--brand)">Teal: with reweighing</span><span class="chip" style="background:var(--line);color:var(--mute)">Grey: without</span></div>
+  </div>
+ </div>
+</section>
+
+<section id="log" hidden><div class="card"><h2>Audit log</h2><p class="mute">Every saved decision and every human override, in order. This log lives in this session only.</p><div id="logbody"></div></div></section>
+
+<section id="about" hidden>
+<div class="grid">
+ <div class="card">
+  <h2>Credit default prediction under fairness constraints for micro-finance lending</h2>
+  <p class="mute">BTECH CAP 501, Project Life Cycle Management, 2026-27. uGDX School of Technology, ATLAS SkillTech University.</p>
+  <h3>Problem</h3><p>Thin-file borrowers are scored on alternative data such as recharges, mobile money and utility bills. That data carries historical bias, so an accurate model can still deny women and rural regions more often. Removing gender from the inputs does not fix it, because other features act as proxies.</p>
+  <h3>Approach</h3><ul><li>Binary classifier for default (90+ days past due).</li><li>Pre-processing: reweighing by gender and region.</li><li>Post-processing: group-specific thresholds.</li><li>Pareto view to choose a model, with a production gate at DIR ≥ 0.80.</li><li>Three plain-language reason codes per score, and human review within ±5 points of the cut-off.</li></ul>
+ </div>
+ <div class="card">
+  <h3 style="margin-top:0">Life cycle (TDSP + Google ML)</h3>
+  <ol class="life"><li>Problem definition</li><li>Data collection</li><li>Data preparation</li><li>Model development</li><li>Evaluation</li><li>Deployment</li><li>Monitoring</li><li>Feedback and retraining</li></ol>
+  <h3>Success criteria</h3><div class="scroll"><table><tr><td>AUC-ROC</td><td>≥ 0.78</td></tr><tr><td>KS statistic</td><td>≥ 40</td></tr><tr><td>Disparate impact ratio</td><td>≥ 0.80</td></tr><tr><td>Demographic parity gap</td><td>≤ 0.10</td></tr><tr><td>Equalised odds gap</td><td>≤ 0.10</td></tr></table></div>
+  <h3>Team</h3><p>Niharika Mathur, Manyata Kothari, Aayushi Purhoit, Ruchita Wagh. Mentor: Prof. Amrita Banerjee.</p>
+  <p class="mute">This demo trains a logistic regression in your browser on synthetic data with built-in bias. It is not trained on real borrowers.</p>
+ </div>
+</div></section>
+<footer>FairLend is a student project for BTECH CAP 501, uGDX School of Technology, ATLAS SkillTech University. Models run in your browser on synthetic data. No information you enter is sent anywhere.</footer>
+<noscript><p class="nojs">FairLend needs JavaScript to run. Please enable it and reload.</p></noscript>
+</div>
+
+<script>
+// ---------- Core: data, model, fairness (pure) ----------
+function rngMake(s){return function(){s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R=rngMake(7);const randn=()=>Math.sqrt(-2*Math.log(1-R()))*Math.cos(2*Math.PI*R());
+const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+const GN=["Male · Urban","Male · Rural","Female · Urban","Female · Rural"];
+const NAMES=["Recharge regularity","Mobile-money activity","Utility bills on time","Group repayment record","Earlier unpaid loan","Loan amount","Monthly income","Informal income","Basic phone"];
+const WHY=["Irregular mobile recharging","Little mobile-money activity","Late utility bill payments","Weak group-repayment record","An earlier loan went unpaid","Requested loan is large","Income is low for this loan","Income is informal or seasonal","Basic mobile device"];
+const PROXY=[1,0,0,0,0,0,0,1,1];
+function gen(n){const rows=[];for(let i=0;i<n;i++){
+ const f=R()<.45?1:0,r=R()<.55?1:0;
+ const inc=Math.exp(randn()*.4+2.6-.25*r-.2*f),rc=cl(.65-.12*r-.05*f+.18*randn(),0,1);
+ const mm=Math.max(0,Math.round(Math.exp(randn()*.5+2.2-.3*r-.15*f))),ut=cl(.75-.08*r+.15*randn(),0,1);
+ const shg=cl(.7+.1*f+.15*randn(),0,1),prev=R()<.12+.05*r?1:0,loan=cl(Math.exp(randn()*.5+2.7),3,60);
+ const inf=R()<.45+.2*r+.15*f?1:0,dev=R()<.35+.3*r+.1*f?1:0;
+ const z=-2.3+1.5*(-2.4*(rc-.6)-2*(ut-.7)-1.6*(shg-.7)+prev+.035*loan-.05*inc+.35*inf+.3*r+.2*f)+.3*randn();
+ rows.push({x:[rc,Math.log1p(mm),ut,shg,prev,loan,inc,inf,dev],y:R()<1/(1+Math.exp(-z))?1:0,g:f*2+r,f,r})}return rows}
+const sig=z=>1/(1+Math.exp(-z));
+function train(rows,wt){const d=rows[0].x.length,n=rows.length,mu=Array(d).fill(0),sd=Array(d).fill(0);
+ rows.forEach(r=>r.x.forEach((v,j)=>mu[j]+=v/n));rows.forEach(r=>r.x.forEach((v,j)=>sd[j]+=(v-mu[j])**2/n));sd.forEach((v,j)=>sd[j]=Math.sqrt(v)||1);
+ const X=rows.map(r=>r.x.map((v,j)=>(v-mu[j])/sd[j])),w=Array(d).fill(0);let b=0,sw=wt.reduce((a,c)=>a+c,0);
+ for(let it=0;it<350;it++){const gw=Array(d).fill(0);let gb=0;
+  for(let i=0;i<n;i++){let z=b;for(let j=0;j<d;j++)z+=w[j]*X[i][j];const e=(sig(z)-rows[i].y)*wt[i];gb+=e;for(let j=0;j<d;j++)gw[j]+=e*X[i][j]}
+  b-=.8*gb/sw;for(let j=0;j<d;j++)w[j]-=.8*(gw[j]/sw+.001*w[j])}
+ return{w,b,mu,sd}}
+function contribs(m,x){return x.map((v,j)=>m.w[j]*(v-m.mu[j])/m.sd[j])}
+function prob(m,x){return sig(m.b+contribs(m,x).reduce((a,c)=>a+c,0))}
+function reweigh(rows){const n=rows.length,pg=[0,0,0,0],py=[0,0],pgy=[[0,0],[0,0],[0,0],[0,0]];
+ rows.forEach(r=>{pg[r.g]++;py[r.y]++;pgy[r.g][r.y]++});return rows.map(r=>pg[r.g]*py[r.y]/(n*pgy[r.g][r.y]))}
+function auc(p,y){const idx=p.map((_,i)=>i).sort((a,b)=>p[a]-p[b]);let rs=0,np=0;idx.forEach((i,k)=>{if(y[i]){rs+=k+1;np++}});const nn=p.length-np;return(rs-np*(np+1)/2)/(np*nn)}
+function ks(p,y){const idx=p.map((_,i)=>i).sort((a,b)=>p[a]-p[b]),P=y.reduce((a,c)=>a+c,0),N=y.length-P;let a=0,b=0,m=0;idx.forEach(i=>{y[i]?a++:b++;m=Math.max(m,Math.abs(a/P-b/N))});return m*100}
+const APPROVE=.7;
+function evaluate(P,test,lam){const y=test.map(r=>r.y),gi=[0,1,2,3].map(g=>test.map((r,i)=>r.g===g?i:-1).filter(i=>i>=0));
+ const q=(arr,a)=>{const s=arr.map(i=>P[i]).sort((u,v)=>u-v);return s[Math.min(s.length-1,Math.floor(a*s.length))]};
+ const all=test.map((_,i)=>i),t0=q(all,APPROVE);
+ const thr=gi.map(ix=>{const nat=ix.filter(i=>P[i]<t0).length/ix.length;return q(ix,(1-lam)*nat+lam*APPROVE)});
+ const nat=gi.map(ix=>ix.filter(i=>P[i]<t0).length/ix.length);
+ const ap=test.map((r,i)=>P[i]<thr[r.g]);const rate=ix=>ix.filter(i=>ap[i]).length/ix.length;
+ const grp=pick=>{const a=all.filter(i=>pick(test[i])),b=all.filter(i=>!pick(test[i]));return[a,b]};
+ const pairs=[grp(r=>r.f===1),grp(r=>r.r===1)];let dir=1,dpd=0,eod=0;
+ pairs.forEach(([a,b])=>{const ra=rate(a),rb=rate(b);dir=Math.min(dir,Math.min(ra,rb)/Math.max(ra,rb));dpd=Math.max(dpd,Math.abs(ra-rb));
+  const tp=ix=>{const g=ix.filter(i=>!y[i]);return g.filter(i=>ap[i]).length/g.length};eod=Math.max(eod,Math.abs(tp(a)-tp(b)))});
+ let tp=0,fp=0,fn=0,tn=0,good=0,bad=0;all.forEach(i=>{const pd=!ap[i];if(y[i]){bad++;pd?tp++:fn++}else{good++;pd?fp++:tn++}});
+ const prec=tp/(tp+fp||1),rec=tp/(tp+fn||1);
+ return{thr,nat,aprRate:gi.map(rate),dir,dpd,eod,ba:(tn/good+tp/bad)/2,f1:2*prec*rec/(prec+rec||1),auc:auc(P,y),ks:ks(P,y)}}
+
+// ---------- App state ----------
+const all=gen(6000),trainSet=all.slice(0,4000),test=all.slice(4000);
+const models=[train(trainSet,trainSet.map(()=>1)),train(trainSet,reweigh(trainSet))];
+const PT=models.map(m=>test.map(r=>prob(m,r.x)));
+const cfg={rw:0,lam:0};let ev=null,logs=[],inputs={},cur=null;
+const $=s=>document.querySelector(s),pc=v=>(v*100).toFixed(1)+"%";
+function recompute(){ev=evaluate(PT[cfg.rw],test,cfg.lam)}
+
+// ---------- Tabs ----------
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x===b));
+ ["score","fair","log","about"].forEach(t=>$("#"+t).hidden=t!==b.dataset.t);if(b.dataset.t==="log")drawLog()});
+
+// ---------- Score tab ----------
+const FIELDS=[["rc","Mobile recharge regularity",0,100,1,60,v=>v+"%"],["mm","Mobile-money transactions per month",0,60,1,9,v=>v],["ut","Utility bills paid on time",0,100,1,75,v=>v+"%"],["shg","Self-help group repayment",0,100,1,70,v=>v+"%"],["loan","Loan requested (₹ thousand)",3,60,1,15,v=>"₹"+v+"k"],["inc","Monthly income (₹ thousand)",3,40,1,13,v=>"₹"+v+"k"]];
+const SELS=[["prev","Earlier unpaid loan",["No","Yes"]],["inf","Income type",["Formal","Informal"]],["dev","Phone type",["Smartphone","Basic phone"]],["gender","Gender",["Male","Female"]],["region","Region",["Urban","Rural"]]];
+const PRESETS=[{rc:42,mm:5,ut:68,shg:82,loan:12,inc:9,prev:0,inf:1,dev:1,gender:1,region:1},{rc:78,mm:24,ut:90,shg:60,loan:14,inc:22,prev:0,inf:0,dev:0,gender:0,region:0},{rc:25,mm:2,ut:40,shg:35,loan:48,inc:7,prev:1,inf:1,dev:1,gender:0,region:1}];
+$("#form").innerHTML=FIELDS.map(f=>`<div class="field"><label for="${f[0]}">${f[1]}<output id="o_${f[0]}"></output></label><input type="range" id="${f[0]}" min="${f[2]}" max="${f[3]}" step="${f[4]}" value="${f[5]}"></div>`).join("")+
+ '<div class="two">'+SELS.map(s=>`<div class="field"><label for="${s[0]}">${s[1]}</label><select id="${s[0]}">${s[2].map((o,i)=>`<option value="${i}">${o}</option>`).join("")}</select></div>`).join("")+"</div>";
+function readInputs(){FIELDS.forEach(f=>{inputs[f[0]]=+$("#"+f[0]).value;$("#o_"+f[0]).textContent=f[6](inputs[f[0]])});SELS.forEach(s=>inputs[s[0]]=+$("#"+s[0]).value)}
+document.querySelectorAll("#form input,#form select").forEach(e=>e.oninput=()=>{readInputs();drawScore()});
+document.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const p=PRESETS[b.dataset.p];Object.keys(p).forEach(k=>$("#"+k).value=p[k]);readInputs();drawScore()});
+function drawScore(){const i=inputs,x=[i.rc/100,Math.log1p(i.mm),i.ut/100,i.shg/100,i.prev,i.loan,i.inc,i.inf,i.dev],m=models[cfg.rw],p=prob(m,x),g=i.gender*2+i.region,t=ev.thr[g];
+ const c=contribs(m,x),order=c.map((v,j)=>j).sort((a,b)=>c[b]-c[a]),top=order.slice(0,3),approve=p<t,border=Math.abs(p-t)<=.05,mx=Math.max(...c.map(Math.abs))||1;
+ cur={x,p,t,g,approve,border,reasons:top.map(j=>WHY[j])};
+ $("#result").innerHTML=`<div class="verdict ${approve?"ok":"no"}"><div><span class="mute" style="color:inherit">Model recommendation</span><b>${approve?"Approve":"Decline"}</b></div><div class="pct" title="Estimated default probability">${pc(p)}</div></div>
+ <div class="meter" aria-hidden="true"><i style="left:${cl(p,0,1)*100}%"></i><u style="left:${cl(t,0,1)*100}%"></u></div>
+ <div class="mute">Marker is the default risk. Dashed line is the cut-off for ${GN[g]} (${pc(t)}). Approve when risk is below the line.</div>
+ ${border?`<div class="flag"><b>Borderline: manual review required.</b> The score is within 5 points of the cut-off, so an underwriter must make the final call.</div>`:""}
+ <h3>Top 3 reasons for this score</h3>${top.map((j,k)=>`<div class="reason"><span class="tag" style="background:var(--brand2);color:var(--brand)">${k+1}</span><b>${WHY[j]}</b>${PROXY[j]?'<span class="tag" title="This feature can stand in for gender, region or income">proxy risk</span>':""}</div>`).join("")}
+ <h3>What pushed the score</h3><div class="bars">${order.map(j=>`<span>${NAMES[j]}</span><div class="bar"><i style="${c[j]>0?`left:50%;width:${c[j]/mx*50}%;background:var(--bad)`:`right:50%;width:${-c[j]/mx*50}%;background:var(--ok)`}"></i></div>`).join("")}</div>
+ <div class="mute" style="margin-top:6px">Red raises risk, green lowers it. Values are exact Shapley contributions for this linear model.</div>
+ <div id="decide" style="margin-top:14px">${border?`<textarea id="note" rows="2" placeholder="Reason for your decision (required)" aria-label="Underwriter note"></textarea><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn p" data-d="Approved">Approve loan</button><button class="btn bad" data-d="Declined">Decline loan</button></div>`:`<button class="btn p" data-d="${approve?"Approved":"Declined"}">Save decision to audit log</button>`}</div>`;
+ document.querySelectorAll("#decide [data-d]").forEach(b=>b.onclick=()=>save(b.dataset.d))}
+function save(final){const nt=$("#note");if(cur.border&&!nt.value.trim()){nt.style.borderColor="var(--bad)";nt.placeholder="Add a reason before deciding";nt.focus();return}
+ const model=cur.approve?"Approved":"Declined";logs.unshift({t:new Date().toLocaleTimeString(),grp:GN[cur.g],p:cur.p,model,final,over:cur.border&&final!==model,border:cur.border,note:cur.border?nt.value.trim():"",why:cur.reasons.join("; ")});
+ $("#decide").innerHTML=`<div class="banner ok">${final} and saved. See the Audit log tab.</div>`}
+function drawLog(){const o=logs.filter(l=>l.over).length;$("#logbody").innerHTML=logs.length?`<div class="mute">${logs.length} decisions, ${o} overrides</div><div class="scroll"><table><tr><th>Time</th><th>Group</th><th>Risk</th><th>Model</th><th>Final</th><th>Notes and reasons</th></tr>${logs.map(l=>`<tr><td>${l.t}</td><td>${l.grp}</td><td>${pc(l.p)}</td><td>${l.model}</td><td><b>${l.final}</b>${l.over?' <span class="tag">override</span>':l.border?' <span class="tag">reviewed</span>':""}</td><td>${l.note?l.note+"<br>":""}<span class="mute">${l.why}</span></td></tr>`).join("")}</table></div>`:`<div class="empty">No decisions yet. Score an applicant and save the decision to see it here.</div>`}
+
+// ---------- Fairness tab ----------
+const GATES=[["AUC ≥ 0.78",e=>e.auc>=.78],["KS ≥ 40",e=>e.ks>=40],["DIR ≥ 0.80",e=>e.dir>=.8],["Parity gap ≤ 0.10",e=>e.dpd<=.1],["Equalised odds gap ≤ 0.10",e=>e.eod<=.1]];
+function drawFair(){const e=ev,ok=GATES.every(g=>g[1](e));
+ $("#gate").innerHTML=`<div class="banner ${ok?"ok":"no"}">${ok?"Production gate passed. This setting meets every success criterion.":"Production gate blocked. This setting fails at least one criterion, so it cannot be promoted."}<div class="chips" style="margin:8px 0 0">${GATES.map(g=>`<span class="chip ${g[1](e)?"ok":"no"}">${g[0]}</span>`).join("")}</div></div>`;
+ const K=(l,v,good)=>`<div class="kpi ${good?"ok":"no"}"><span class="mute">${l}</span><b>${v}</b></div>`;
+ $("#kpis").innerHTML=K("AUC-ROC",e.auc.toFixed(3),e.auc>=.78)+K("KS statistic",e.ks.toFixed(1),e.ks>=40)+K("Disparate impact",e.dir.toFixed(2),e.dir>=.8)+K("Parity gap",e.dpd.toFixed(3),e.dpd<=.1)+K("Equalised odds gap",e.eod.toFixed(3),e.eod<=.1)+`<div class="kpi"><span class="mute">F1 (default class)</span><b>${e.f1.toFixed(2)}</b></div>`;
+ $("#thr").innerHTML="<tr><th>Group</th><th>Approved before</th><th>Approved now</th><th>Cut-off</th></tr>"+GN.map((n,g)=>`<tr><td>${n}</td><td>${pc(e.nat[g])}</td><td>${pc(e.aprRate[g])}</td><td>${pc(e.thr[g])}</td></tr>`).join("");
+ $("#lamv").textContent=Math.round(cfg.lam*100)+"%";$("#lam").value=cfg.lam*100;$("#rw").checked=!!cfg.rw;
+ const pts=[];[0,1].forEach(rw=>{for(let l=0;l<=20;l++)pts.push({rw,lam:l/20,e:evaluate(PT[rw],test,l/20)})});
+ const xs=pts.map(p=>p.e.dir),ys=pts.map(p=>p.e.ba),x0=Math.min(.6,Math.min(...xs)-.03),x1=1.02,y0=Math.min(...ys)-.01,y1=Math.max(...ys)+.01;
+ const X=v=>50+(v-x0)/(x1-x0)*390,Y=v=>270-(v-y0)/(y1-y0)*240;
+ let s=`<line x1="50" y1="270" x2="440" y2="270" stroke="var(--line)"/><line x1="50" y1="30" x2="50" y2="270" stroke="var(--line)"/><line x1="${X(.8)}" y1="30" x2="${X(.8)}" y2="270" stroke="var(--ink)" stroke-dasharray="4 4"/><text x="${X(.8)+4}" y="42">DIR 0.80</text><text x="245" y="306" text-anchor="middle">Disparate impact ratio (fairer to the right)</text><text transform="translate(14 150) rotate(-90)" text-anchor="middle">Balanced accuracy</text>`;
+ [0,.5,1].forEach(k=>{const v=x0+k*(x1-x0);s+=`<text x="${X(v)}" y="286" text-anchor="middle">${v.toFixed(2)}</text>`});
+ [0,1].forEach(k=>{const v=y0+k*(y1-y0);s+=`<text x="44" y="${Y(v)+4}" text-anchor="end">${v.toFixed(2)}</text>`});
+ pts.forEach(p=>{const cur2=p.rw===cfg.rw&&Math.abs(p.lam-cfg.lam)<.001;s+=`<circle cx="${X(p.e.dir)}" cy="${Y(p.e.ba)}" r="${cur2?8:5}" fill="${p.rw?"var(--brand)":"var(--mute)"}" opacity="${cur2?1:.7}" stroke="${cur2?"var(--ink)":"none"}" stroke-width="2" tabindex="0" role="button" data-rw="${p.rw}" data-lam="${p.lam}"><title>${p.rw?"Reweighed":"Not reweighed"}, calibration ${Math.round(p.lam*100)}%: DIR ${p.e.dir.toFixed(2)}, balanced accuracy ${p.e.ba.toFixed(3)}</title></circle>`});
+ $("#pareto").innerHTML=s;
+ document.querySelectorAll("#pareto circle").forEach(c=>{const f=()=>apply(+c.dataset.rw,+c.dataset.lam);c.onclick=f;c.onkeydown=ev2=>{if(ev2.key==="Enter"||ev2.key===" "){ev2.preventDefault();f()}}})}
+function apply(rw,lam){cfg.rw=rw;cfg.lam=lam;recompute();drawFair();drawScore();$("#status").textContent=status()}
+$("#rw").onchange=e=>apply(e.target.checked?1:0,cfg.lam);$("#lam").oninput=e=>apply(cfg.rw,e.target.value/100);
+const status=()=>`Active: ${cfg.rw?"reweighed":"standard"} model, ${Math.round(cfg.lam*100)}% calibration`;
+
+recompute();readInputs();$("#status").textContent=status();drawScore();drawFair();drawLog();
+</script>
+</body>
+</html>
